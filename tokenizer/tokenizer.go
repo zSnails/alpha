@@ -67,7 +67,7 @@ type Spec struct {
 var SPECS = []Spec{
 	{
 		Type: NewLine,
-		Spec: `^[\r\n]+`,
+		Spec: `^[\r\n]`,
 	},
 	{
 		Type: Whitespace,
@@ -87,11 +87,11 @@ var SPECS = []Spec{
 	},
 	{
 		Type: If,
-		Spec: `^if`,
+		Spec: `^if\b`,
 	},
 	{
 		Type: End,
-		Spec: `^end`,
+		Spec: `^end\b`,
 	},
 	{
 		Type: Tilde,
@@ -107,11 +107,11 @@ var SPECS = []Spec{
 	},
 	{
 		Type: Then,
-		Spec: `^then`,
+		Spec: `^then\b`,
 	},
 	{
 		Type: Else,
-		Spec: `^else`,
+		Spec: `^else\b`,
 	},
 
 	// NOTE: The order is important
@@ -173,31 +173,31 @@ var SPECS = []Spec{
 	},
 	{
 		Type: While,
-		Spec: `^while`,
+		Spec: `^while\b`,
 	},
 	{
 		Type: Do,
-		Spec: `^do`,
+		Spec: `^do\b`,
 	},
 	{
 		Type: Let,
-		Spec: `^let`,
+		Spec: `^let\b`,
 	},
 	{
 		Type: Var,
-		Spec: `^var`,
+		Spec: `^var\b`,
 	},
 	{
 		Type: Const,
-		Spec: `^const`,
+		Spec: `^const\b`,
 	},
 	{
 		Type: In,
-		Spec: `^in`,
+		Spec: `^in\b`,
 	},
 	{
 		Type: Begin,
-		Spec: `^begin`,
+		Spec: `^begin\b`,
 	},
 	{
 		Type: Identifier,
