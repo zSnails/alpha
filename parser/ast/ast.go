@@ -24,6 +24,9 @@ const (
 	While
 	Do
 	Let
+	Const
+	Var
+	Tilde
 	In
 	Begin
 	End
