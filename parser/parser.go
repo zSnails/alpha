@@ -281,7 +281,7 @@ func (p *Parser) TypeDenoter() (*ast.Node, error) {
 }
 
 func (p *Parser) tokensLeft() bool {
-	return p.currentToken < len(p.tokens)-1
+	return p.currentToken < len(p.tokens)
 }
 
 func (p *Parser) Expression() (*ast.Node, error) {
