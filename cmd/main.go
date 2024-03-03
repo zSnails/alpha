@@ -2,13 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"lang_test/parser"
 	"lang_test/tokenizer"
 	"log"
 	"os"
 )
 
-const CONTENT = `variable = 44 + ("hola" == 44*(22-variableDeNumero+11))`
+const CONTENT = `if condition then print() else print(22) end`
 
 func main() {
 	lex := tokenizer.NewTokenizer(CONTENT)
@@ -23,5 +24,6 @@ func main() {
 	}
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
+	fmt.Print("Ast ")
 	_ = enc.Encode(node)
 }

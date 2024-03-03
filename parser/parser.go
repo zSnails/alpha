@@ -48,18 +48,28 @@ func (p *Parser) Program() (*ast.Node, error) {
 
 func (p *Parser) SingleCommand() (*ast.Node, error) {
 	currentToken := p.GetCurrentToken()
+	node := ast.NewNode(ast.SingleCommand, nil)
 	if currentToken.Type == tokenizer.Identifier {
+		node.AddChild(ast.NewNode(ast.Identifier, currentToken.Value))
 		p.acceptIt()
 		next := p.GetCurrentToken()
 		if next.Type == tokenizer.Equals {
+			node.AddChild(ast.NewNode(ast.Equals, next.Value))
 			p.acceptIt()
 			expressionNode, err := p.Expression()
 			if err != nil {
 				return nil, err
 			}
-			return expressionNode, nil
+			node.AddChild(expressionNode)
+			return node, nil
 		} else if next.Type == tokenizer.LeftParenthesis {
 			p.acceptIt()
+			next = p.GetCurrentToken()
+			if next.Type == tokenizer.RightParenthesis {
+                p.acceptIt()
+				return node, nil
+			}
+
 			expressionNode, err := p.Expression()
 			if err != nil {
 				return nil, err
@@ -68,8 +78,36 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			if err != nil {
 				return nil, err
 			}
-			return expressionNode, nil
+			node.AddChild(expressionNode)
+			return node, nil
 		}
+	} else if currentToken.Type == tokenizer.If {
+		node.AddChild(ast.NewNode(ast.If, nil))
+		p.acceptIt()
+		expressionNode, err := p.Expression()
+		if err != nil {
+			return nil, err
+		}
+		node.AddChild(expressionNode)
+		err = p.expect(tokenizer.Then)
+		if err != nil {
+			return nil, err
+		}
+		ifBlockSingleCommand, err := p.SingleCommand()
+		if err != nil {
+			return nil, err
+		}
+		node.AddChild(ifBlockSingleCommand)
+		err = p.expect(tokenizer.Else)
+		if err != nil {
+			return nil, err
+		}
+		elseBlockSingleCommand, err := p.SingleCommand()
+		if err != nil {
+			return nil, err
+		}
+		node.AddChild(elseBlockSingleCommand)
+		return node, nil
 	}
 	return nil, fmt.Errorf("unexpected token %s\n", currentToken)
 }
