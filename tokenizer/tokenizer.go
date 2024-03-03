@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"regexp"
 )
 
@@ -21,8 +22,8 @@ func (t *Token) GetPosition() (int, int) {
 
 func (t *Token) String() string {
 	// TODO: report line and characer instead of this piece of shit.
-	// return fmt.Sprintf("[<%s>@%d:%d %s]", TokenNames[t.Type], t.row, t.col, t.Value)
-	return fmt.Sprintf("<%s>", TokenNames[t.Type])
+	return fmt.Sprintf("[<%s>@%d:%d %s]", TokenNames[t.Type], t.row, t.col, t.Value)
+	// return fmt.Sprintf("<%s>", TokenNames[t.Type])
 }
 
 const (
@@ -238,6 +239,15 @@ var TokenNames = map[TokenType]string{
 type Tokenizer struct {
 	content string
 	cursor  int
+}
+
+func FromFile(filename string) (*Tokenizer, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewTokenizer(string(data)), nil
 }
 
 func NewTokenizer(content string) *Tokenizer {
