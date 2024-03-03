@@ -28,6 +28,7 @@ func (t *Token) String() string {
 
 const (
 	Whitespace TokenType = iota
+	NewLine
 	If
 	Then
 	Else
@@ -67,8 +68,12 @@ type Spec struct {
 
 var SPECS = []Spec{
 	{
+		Type: NewLine,
+		Spec: `^[\r\n]+`,
+	},
+	{
 		Type: Whitespace,
-		Spec: `^[ \r\n\t]+`,
+		Spec: `^[ \t]+`,
 	},
 	{
 		Type: Whitespace,
@@ -239,6 +244,13 @@ var TokenNames = map[TokenType]string{
 type Tokenizer struct {
 	content string
 	cursor  int
+	file    string
+	line    int
+	char    int
+}
+
+func (t *Tokenizer) GetFileName() string {
+	return t.file
 }
 
 func FromFile(filename string) (*Tokenizer, error) {
@@ -254,6 +266,7 @@ func NewTokenizer(content string) *Tokenizer {
 	return &Tokenizer{
 		content: content,
 		cursor:  0,
+		line:    1,
 	}
 }
 
@@ -268,6 +281,7 @@ func (t *Tokenizer) match(spec, content string) (string, int) {
 
 	size := len(matched)
 	t.cursor += size
+	t.char += size
 	return string(matched), size
 }
 
@@ -299,6 +313,12 @@ func (t *Tokenizer) GetNextToken() (*Token, error) {
 			continue
 		}
 
+		if spec.Type == NewLine {
+			t.line++
+			t.char = 0
+			return t.GetNextToken()
+		}
+
 		if spec.Type == Whitespace {
 			return t.GetNextToken()
 		}
@@ -310,8 +330,10 @@ func (t *Tokenizer) GetNextToken() (*Token, error) {
 		return &Token{
 			Type:  spec.Type,
 			Value: matched,
+			col:   t.char - size,
+			row:   t.line,
 		}, nil
 	}
 
-	return nil, fmt.Errorf("unexpected token %c at position %d\n", t.content[t.cursor], t.cursor)
+	return nil, fmt.Errorf("%s:%d:%d: unexpected token '%c'\n", t.file, t.line, t.char, t.content[t.cursor])
 }

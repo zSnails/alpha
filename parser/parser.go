@@ -10,6 +10,7 @@ import (
 type Parser struct {
 	tokens       []*tokenizer.Token
 	currentToken int
+	lexer        *tokenizer.Tokenizer
 }
 
 func (p *Parser) GetCurrentToken() *tokenizer.Token {
@@ -178,7 +179,17 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			return node, nil
 		}
 	}
-	return nil, fmt.Errorf("unexpected token '%s' while building SingleCommand\n", tokenizer.TokenNames[currentToken.Type])
+	return nil, p.UnexpectedToken(currentToken)
+}
+
+func (p *Parser) UnexpectedTokenExpected(got *tokenizer.Token, expected tokenizer.TokenType) error {
+	row, col := got.GetPosition()
+	return fmt.Errorf("%s:%d:%d: unexpected token '%s' expected '%s'\n", p.lexer.GetFileName(), row, col, tokenizer.TokenNames[got.Type], tokenizer.TokenNames[expected])
+}
+
+func (p *Parser) UnexpectedToken(token *tokenizer.Token) error {
+	row, col := token.GetPosition()
+	return fmt.Errorf("%s:%d:%d: unexpected token '%s'\n", p.lexer.GetFileName(), row, col, tokenizer.TokenNames[token.Type])
 }
 
 func (p *Parser) Declaration() (*ast.Node, error) {
@@ -211,7 +222,7 @@ func (p *Parser) SingleDeclaration() (*ast.Node, error) {
 			p.acceptIt()
 			next := p.GetCurrentToken()
 			if next.Type != tokenizer.Identifier {
-				return nil, fmt.Errorf("unexpected token '%s' while building SingleDeclaration, expected Identifier\n", tokenizer.TokenNames[next.Type])
+				return nil, p.UnexpectedTokenExpected(currentToken, tokenizer.Identifier)
 			}
 			p.acceptIt()
 			node.AddChild(ast.NewNode(ast.Identifier, next.Value))
@@ -236,7 +247,7 @@ func (p *Parser) SingleDeclaration() (*ast.Node, error) {
 
 			next := p.GetCurrentToken()
 			if next.Type != tokenizer.Identifier {
-				return nil, fmt.Errorf("unexpected token '%s' while building SingleDeclaration, expected Identifier\n", tokenizer.TokenNames[next.Type])
+				return nil, p.UnexpectedTokenExpected(currentToken, tokenizer.Identifier)
 			}
 			node.AddChild(ast.NewNode(ast.Identifier, next.Value))
 			p.acceptIt()
@@ -275,7 +286,7 @@ func (p *Parser) TypeDenoter() (*ast.Node, error) {
 		return ast.NewNode(ast.TypeDenoter, currentToken.Value), nil
 	}
 
-	return nil, fmt.Errorf("unexpected token '%s' while building TypeDenoter, expected Identifier\n", tokenizer.TokenNames[currentToken.Type])
+	return nil, p.UnexpectedTokenExpected(currentToken, tokenizer.Identifier)
 }
 
 func (p *Parser) tokensLeft() bool {
@@ -357,7 +368,7 @@ func (p *Parser) PrimaryExpression() (*ast.Node, error) {
 			return ast.NewNode(ast.String, currentToken.Value[1:]), nil
 		}
 	}
-	return nil, fmt.Errorf("unexpected token '%s' while producing PrimaryExpression\n", currentToken)
+	return nil, p.UnexpectedToken(currentToken)
 }
 
 func (p *Parser) acceptIt() {
