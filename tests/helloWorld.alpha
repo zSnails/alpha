@@ -1,12 +1,12 @@
 // vim:ft=alpha
 begin
-    print("puta madre con seke de verdad ahhhh huevilas este");
+    print("Hola Mundo");
     let var condition: bool in begin
         condition = true;
         if condition then begin
-            print("Pinga de seke")
+            print("Condición 1")
         end else begin
-            print("Pinga de mauro")
+            print("Condición 2")
         end
     end
 end;
