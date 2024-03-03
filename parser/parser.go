@@ -49,83 +49,95 @@ func (p *Parser) Program() (*ast.Node, error) {
 func (p *Parser) SingleCommand() (*ast.Node, error) {
 	currentToken := p.GetCurrentToken()
 	node := ast.NewNode(ast.SingleCommand, nil)
-	if currentToken.Type == tokenizer.Identifier {
-		node.AddChild(ast.NewNode(ast.Identifier, currentToken.Value))
-		p.acceptIt()
-		next := p.GetCurrentToken()
-		if next.Type == tokenizer.Equals {
-			node.AddChild(ast.NewNode(ast.Equals, next.Value))
+	switch currentToken.Type {
+	case tokenizer.Identifier:
+		{
+			node.AddChild(ast.NewNode(ast.Identifier, currentToken.Value))
 			p.acceptIt()
-			expressionNode, err := p.Expression()
-			if err != nil {
-				return nil, err
-			}
-			node.AddChild(expressionNode)
-			return node, nil
-		} else if next.Type == tokenizer.LeftParenthesis {
-			p.acceptIt()
-			next = p.GetCurrentToken()
-			if next.Type == tokenizer.RightParenthesis {
-				p.acceptIt()
-				return node, nil
-			}
+			next := p.GetCurrentToken()
+			switch next.Type {
+			case tokenizer.Equals:
+				{
+					node.AddChild(ast.NewNode(ast.Equals, next.Value))
+					p.acceptIt()
+					expressionNode, err := p.Expression()
+					if err != nil {
+						return nil, err
+					}
+					node.AddChild(expressionNode)
+					return node, nil
+				}
+			case tokenizer.LeftParenthesis:
+				{
+					p.acceptIt()
+					next = p.GetCurrentToken()
+					if next.Type == tokenizer.RightParenthesis {
+						p.acceptIt()
+						return node, nil
+					}
 
+					expressionNode, err := p.Expression()
+					if err != nil {
+						return nil, err
+					}
+					err = p.expect(tokenizer.RightParenthesis)
+					if err != nil {
+						return nil, err
+					}
+					node.AddChild(expressionNode)
+					return node, nil
+				}
+			}
+		}
+	case tokenizer.If:
+		{
+			node.AddChild(ast.NewNode(ast.If, nil))
+			p.acceptIt()
 			expressionNode, err := p.Expression()
 			if err != nil {
 				return nil, err
 			}
-			err = p.expect(tokenizer.RightParenthesis)
+			node.AddChild(expressionNode)
+			err = p.expect(tokenizer.Then)
 			if err != nil {
 				return nil, err
 			}
-			node.AddChild(expressionNode)
+			ifBlockSingleCommand, err := p.SingleCommand()
+			if err != nil {
+				return nil, err
+			}
+			node.AddChild(ifBlockSingleCommand)
+			err = p.expect(tokenizer.Else)
+			if err != nil {
+				return nil, err
+			}
+			elseBlockSingleCommand, err := p.SingleCommand()
+			if err != nil {
+				return nil, err
+			}
+			node.AddChild(elseBlockSingleCommand)
 			return node, nil
 		}
-	} else if currentToken.Type == tokenizer.If {
-		node.AddChild(ast.NewNode(ast.If, nil))
-		p.acceptIt()
-		expressionNode, err := p.Expression()
-		if err != nil {
-			return nil, err
+	case tokenizer.While:
+		{
+			node.AddChild(ast.NewNode(ast.While, nil))
+			p.acceptIt()
+			while, err := p.Expression()
+			if err != nil {
+				return nil, err
+			}
+			node.AddChild(while)
+			err = p.expect(tokenizer.Do)
+			if err != nil {
+				return nil, err
+			}
+			singleCommand, err := p.SingleCommand()
+			if err != nil {
+				return nil, err
+			}
+			node.AddChild(singleCommand)
+			return node, nil
 		}
-		node.AddChild(expressionNode)
-		err = p.expect(tokenizer.Then)
-		if err != nil {
-			return nil, err
-		}
-		ifBlockSingleCommand, err := p.SingleCommand()
-		if err != nil {
-			return nil, err
-		}
-		node.AddChild(ifBlockSingleCommand)
-		err = p.expect(tokenizer.Else)
-		if err != nil {
-			return nil, err
-		}
-		elseBlockSingleCommand, err := p.SingleCommand()
-		if err != nil {
-			return nil, err
-		}
-		node.AddChild(elseBlockSingleCommand)
-		return node, nil
-	} else if currentToken.Type == tokenizer.While {
-		node.AddChild(ast.NewNode(ast.While, nil))
-		p.acceptIt()
-		while, err := p.Expression()
-		if err != nil {
-			return nil, err
-		}
-		node.AddChild(while)
-		err = p.expect(tokenizer.Do)
-		if err != nil {
-			return nil, err
-		}
-		singleCommand, err := p.SingleCommand()
-		if err != nil {
-			return nil, err
-		}
-		node.AddChild(singleCommand)
-		return node, nil
 	}
 	return nil, fmt.Errorf("unexpected token %s\n", currentToken)
 }
@@ -191,34 +203,46 @@ func isOneOf(token *tokenizer.Token, types ...tokenizer.TokenType) bool {
 
 func (p *Parser) PrimaryExpression() (*ast.Node, error) {
 	currentToken := p.GetCurrentToken()
-	if currentToken.Type == tokenizer.Integer {
-		p.acceptIt()
-		value, err := strconv.Atoi(currentToken.Value)
-		if err != nil {
-			return nil, err
+	switch currentToken.Type {
+	case tokenizer.Integer:
+		{
+			p.acceptIt()
+			value, err := strconv.Atoi(currentToken.Value)
+			if err != nil {
+				return nil, err
+			}
+			return ast.NewNode(ast.Integer, value), nil
 		}
-		return ast.NewNode(ast.Integer, value), nil
-	} else if currentToken.Type == tokenizer.Float {
-		p.acceptIt()
-		value, err := strconv.ParseFloat(currentToken.Value, 64)
-		if err != nil {
-			return nil, err
+	case tokenizer.Float:
+		{
+			p.acceptIt()
+			value, err := strconv.ParseFloat(currentToken.Value, 64)
+			if err != nil {
+				return nil, err
+			}
+			return ast.NewNode(ast.Integer, value), nil
 		}
-		return ast.NewNode(ast.Integer, value), nil
-	} else if currentToken.Type == tokenizer.LeftParenthesis {
-		p.acceptIt()
-		res, err := p.Expression()
-		if err != nil {
-			return nil, err
+	case tokenizer.LeftParenthesis:
+		{
+			p.acceptIt()
+			res, err := p.Expression()
+			if err != nil {
+				return nil, err
+			}
+			err = p.expect(tokenizer.RightParenthesis)
+			return res, err
 		}
-		err = p.expect(tokenizer.RightParenthesis)
-		return res, err
-	} else if currentToken.Type == tokenizer.Identifier {
-		p.acceptIt()
-		return ast.NewNode(ast.Identifier, currentToken.Value), nil
-	} else if currentToken.Type == tokenizer.String {
-		p.acceptIt()
-		return ast.NewNode(ast.String, currentToken.Value[1:]), nil
+
+	case tokenizer.Identifier:
+		{
+			p.acceptIt()
+			return ast.NewNode(ast.Identifier, currentToken.Value), nil
+		}
+	case tokenizer.String:
+		{
+			p.acceptIt()
+			return ast.NewNode(ast.String, currentToken.Value[1:]), nil
+		}
 	}
 	return nil, fmt.Errorf("unexpected token while producing PrimaryExpression %s\n", currentToken)
 }
