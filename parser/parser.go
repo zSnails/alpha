@@ -297,16 +297,9 @@ func (p *Parser) SingleDeclaration() (*ast.Node, error) {
 }
 
 func isOperator(token *tokenizer.Token) bool {
-	return token.Type == tokenizer.PlusOperator ||
-		token.Type == tokenizer.MinusOperator ||
-		token.Type == tokenizer.DivisionOperator ||
-		token.Type == tokenizer.MultiplicationOperator ||
-		token.Type == tokenizer.Equals ||
-		token.Type == tokenizer.Comparison ||
-		token.Type == tokenizer.LessThan ||
-		token.Type == tokenizer.GreaterThan ||
-		token.Type == tokenizer.LessThanEqual ||
-		token.Type == tokenizer.GreaterThanEqual
+	return isOneOf(token, tokenizer.PlusOperator, tokenizer.MinusOperator,
+		tokenizer.DivisionOperator, tokenizer.MultiplicationOperator, tokenizer.Equals, tokenizer.Comparison,
+		tokenizer.LessThan, tokenizer.GreaterThan, tokenizer.LessThanEqual, tokenizer.GreaterThanEqual)
 }
 
 func (p *Parser) TypeHint() (*ast.Node, error) {
