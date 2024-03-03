@@ -44,7 +44,7 @@ func (p *Parser) expect(_type tokenizer.TokenType) error {
 		return err
 	}
 	if token.Type != _type {
-		return fmt.Errorf("expected token %s, got %s\n", tokenizer.TokenNames[_type], tokenizer.TokenNames[token.Type])
+		return p.UnexpectedTokenExpected(token, _type)
 	}
 	p.advance()
 
@@ -56,7 +56,7 @@ func (p *Parser) advance() {
 }
 
 func (p *Parser) Program() (*ast.Node, error) {
-	return p.SingleCommand()
+	return p.Command()
 }
 
 func (p *Parser) SingleCommand() (*ast.Node, error) {
