@@ -9,7 +9,13 @@ import (
 	"os"
 )
 
-const CONTENT = `while someCondition do print("Hello World")`
+const CONTENT = `
+if something then begin
+    print("Hola mundo")
+end
+else begin
+    print("Adios mundo") 
+end`
 
 func main() {
 	lex := tokenizer.NewTokenizer(CONTENT)
@@ -18,7 +24,7 @@ func main() {
 		panic(err)
 	}
 
-	node, err := parser.SingleCommand()
+	node, err := parser.Program()
 	if err != nil {
 		log.Fatal(err)
 	}

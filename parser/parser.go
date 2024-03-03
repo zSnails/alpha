@@ -43,7 +43,8 @@ func (p *Parser) advance() {
 }
 
 func (p *Parser) Program() (*ast.Node, error) {
-	return p.SingleCommand()
+	// return p.SingleCommand()
+	return p.Command()
 }
 
 func (p *Parser) SingleCommand() (*ast.Node, error) {
@@ -166,29 +167,29 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 		}
 	case tokenizer.Begin:
 		{
-            p.acceptIt()
-            command, err := p.Command()
-            if err != nil {
-                return nil, err
-            }
-            node.AddChild(command)
-            err = p.expect(tokenizer.End)
-            if err != nil {
-                return nil, err
-            }
-            return node, nil
+			p.acceptIt()
+			command, err := p.Command()
+			if err != nil {
+				return nil, err
+			}
+			node.AddChild(command)
+			err = p.expect(tokenizer.End)
+			if err != nil {
+				return nil, err
+			}
+			return node, nil
 		}
 	}
 	return nil, fmt.Errorf("unexpected token '%s' while building SingleCommand\n", tokenizer.TokenNames[currentToken.Type])
 }
 
 func (p *Parser) Declaration() (*ast.Node, error) {
-	out := ast.NewNode(ast.Declaration, nil)
+	node := ast.NewNode(ast.Declaration, nil)
 	singleDeclaration, err := p.SingleDeclaration()
 	if err != nil {
 		return nil, err
 	}
-	out.AddChild(singleDeclaration)
+	node.AddChild(singleDeclaration)
 
 	for p.tokensLeft() && p.GetCurrentToken().Type == tokenizer.Semicolon {
 		p.acceptIt()
@@ -196,10 +197,10 @@ func (p *Parser) Declaration() (*ast.Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		out.AddChild(single)
+		node.AddChild(single)
 	}
 
-	return out, nil
+	return node, nil
 }
 
 func (p *Parser) SingleDeclaration() (*ast.Node, error) {
@@ -284,26 +285,26 @@ func (p *Parser) tokensLeft() bool {
 }
 
 func (p *Parser) Expression() (*ast.Node, error) {
-	out := ast.NewNode(ast.Expression, nil)
+	node := ast.NewNode(ast.Expression, nil)
 	primaryExpressionNode, err := p.PrimaryExpression()
 	if err != nil {
 		return nil, err
 	}
-	out.AddChild(primaryExpressionNode)
+	node.AddChild(primaryExpressionNode)
 
 	for p.tokensLeft() && isOperator(p.GetCurrentToken()) {
 		operator := p.GetCurrentToken()
 		operatorNode := ast.NewNode(ast.Operator, operator)
-		out.AddChild(operatorNode)
+		node.AddChild(operatorNode)
 		p.acceptIt()
 		primaryExpressionNode, err = p.PrimaryExpression()
 		if err != nil {
 			return nil, err
 		}
-		out.AddChild(primaryExpressionNode)
+		node.AddChild(primaryExpressionNode)
 	}
 
-	return out, nil
+	return node, nil
 }
 
 func isOneOf(token *tokenizer.Token, types ...tokenizer.TokenType) bool {
@@ -369,5 +370,20 @@ func (p *Parser) acceptIt() {
 }
 
 func (p *Parser) Command() (*ast.Node, error) {
-	return p.SingleCommand()
+	node := ast.NewNode(ast.Command, nil)
+	singleCommand, err := p.SingleCommand()
+	if err != nil {
+		return nil, err
+	}
+	node.AddChild(singleCommand)
+
+	if p.tokensLeft() && p.GetCurrentToken().Type == tokenizer.Semicolon {
+		p.acceptIt()
+		single, err := p.SingleCommand()
+		if err != nil {
+			return nil, err
+		}
+		node.AddChild(single)
+	}
+	return node, nil
 }
