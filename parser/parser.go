@@ -285,7 +285,7 @@ func (p *Parser) SingleDeclaration() (*ast.Node, error) {
 			if err != nil {
 				return nil, err
 			}
-			typeDenoter, err := p.TypeDenoter()
+			typeDenoter, err := p.TypeHint()
 			if err != nil {
 				return nil, err
 			}
@@ -309,7 +309,7 @@ func isOperator(token *tokenizer.Token) bool {
 		token.Type == tokenizer.GreaterThanEqual
 }
 
-func (p *Parser) TypeDenoter() (*ast.Node, error) {
+func (p *Parser) TypeHint() (*ast.Node, error) {
 	currentToken, err := p.GetCurrentToken()
 	if err != nil {
 		return nil, err
