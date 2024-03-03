@@ -21,9 +21,7 @@ func (t *Token) GetPosition() (int, int) {
 }
 
 func (t *Token) String() string {
-	// TODO: report line and characer instead of this piece of shit.
 	return fmt.Sprintf("[<%s>@%d:%d %s]", TokenNames[t.Type], t.row, t.col, t.Value)
-	// return fmt.Sprintf("<%s>", TokenNames[t.Type])
 }
 
 const (
@@ -259,7 +257,12 @@ func FromFile(filename string) (*Tokenizer, error) {
 		return nil, err
 	}
 
-	return NewTokenizer(string(data)), nil
+	return &Tokenizer{
+		content: string(data),
+		cursor:  0,
+		line:    1,
+		file:    filename,
+	}, nil
 }
 
 func NewTokenizer(content string) *Tokenizer {
