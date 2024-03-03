@@ -66,7 +66,7 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			p.acceptIt()
 			next = p.GetCurrentToken()
 			if next.Type == tokenizer.RightParenthesis {
-                p.acceptIt()
+				p.acceptIt()
 				return node, nil
 			}
 
@@ -107,6 +107,24 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			return nil, err
 		}
 		node.AddChild(elseBlockSingleCommand)
+		return node, nil
+	} else if currentToken.Type == tokenizer.While {
+		node.AddChild(ast.NewNode(ast.While, nil))
+		p.acceptIt()
+		while, err := p.Expression()
+		if err != nil {
+			return nil, err
+		}
+		node.AddChild(while)
+		err = p.expect(tokenizer.Do)
+		if err != nil {
+			return nil, err
+		}
+		singleCommand, err := p.SingleCommand()
+		if err != nil {
+			return nil, err
+		}
+		node.AddChild(singleCommand)
 		return node, nil
 	}
 	return nil, fmt.Errorf("unexpected token %s\n", currentToken)

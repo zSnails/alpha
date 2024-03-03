@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-const CONTENT = `if condition then print() else print(22) end`
+const CONTENT = `while someCondition do print("Hello World")`
 
 func main() {
 	lex := tokenizer.NewTokenizer(CONTENT)
