@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-const CONTENT = `semen = 44 + ("hola" == 44)`
+const CONTENT = `variable = 44 + ("hola" == 44*(22-variableDeNumero+11))`
 
 func main() {
 	lex := tokenizer.NewTokenizer(CONTENT)
