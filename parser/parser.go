@@ -43,8 +43,7 @@ func (p *Parser) advance() {
 }
 
 func (p *Parser) Program() (*ast.Node, error) {
-	// return p.SingleCommand()
-	return p.Command()
+	return p.SingleCommand()
 }
 
 func (p *Parser) SingleCommand() (*ast.Node, error) {
@@ -149,7 +148,6 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			if err != nil {
 				return nil, err
 			}
-
 			node.AddChild(declaration)
 
 			err = p.expect(tokenizer.In)
