@@ -33,6 +33,9 @@ const (
 	While
 	Do
 	Let
+	Var
+	Const
+	Tilde
 	In
 	Begin
 	End
@@ -51,6 +54,8 @@ const (
 	GreaterThanEqual
 	LeftParenthesis
 	RightParenthesis
+	Colon
+	Semicolon
 	String
 )
 
@@ -83,6 +88,18 @@ var SPECS = []Spec{
 	{
 		Type: End,
 		Spec: `^end`,
+	},
+	{
+		Type: Tilde,
+		Spec: `^\~`,
+	},
+	{
+		Type: Colon,
+		Spec: `^\:`,
+	},
+	{
+		Type: Semicolon,
+		Spec: `^\;`,
 	},
 	{
 		Type: Then,
@@ -163,6 +180,14 @@ var SPECS = []Spec{
 		Spec: `^let`,
 	},
 	{
+		Type: Var,
+		Spec: `^var`,
+	},
+	{
+		Type: Const,
+		Spec: `^const`,
+	},
+	{
 		Type: In,
 		Spec: `^in`,
 	},
@@ -185,24 +210,29 @@ var TokenNames = map[TokenType]string{
 	Identifier:             "identifier",
 	Float:                  "float",
 	Integer:                "integer",
-	PlusOperator:           "plus",
-	MinusOperator:          "minus",
-	DivisionOperator:       "division",
-	MultiplicationOperator: "multiplication",
-	LeftParenthesis:        "left parenthesis",
-	RightParenthesis:       "right parenthesis",
+	PlusOperator:           "+",
+	MinusOperator:          "-",
+	DivisionOperator:       "/",
+	MultiplicationOperator: "*",
+	LeftParenthesis:        "(",
+	RightParenthesis:       ")",
 	Comparison:             "comparison",
-	Equals:                 "equals",
-	LessThan:               "less than",
-	GreaterThan:            "greateer than",
-	LessThanEqual:          "less than equal",
-	GreaterThanEqual:       "greater than equal",
+	Equals:                 "=",
+	LessThan:               "<",
+	GreaterThan:            ">",
+	LessThanEqual:          "<=",
+	GreaterThanEqual:       ">=",
 	While:                  "while",
 	Do:                     "do",
 	Let:                    "let",
+	Var:                    "var",
+	Const:                  "const",
 	In:                     "in",
 	Begin:                  "begin",
 	String:                 "string",
+	Tilde:                  "~",
+	Colon:                  ":",
+	Semicolon:              ";",
 }
 
 type Tokenizer struct {
