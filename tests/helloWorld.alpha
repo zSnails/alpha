@@ -1,0 +1,23 @@
+// vim:ft=alpha
+begin
+    print("puta madre con seke de verdad ahhhh huevilas este");
+    let var condition: bool in begin
+        condition = true;
+        if condition then begin
+            print("Pinga de seke")
+        end else begin
+            print("Pinga de mauro")
+        end
+    end
+end;
+
+let const edad ~ 15 in begin
+    if edad < 18 then begin
+        print("Le gusta a Z")
+    end else begin
+        print("Le gusta a seke")
+    end;
+    print("me llamo zSnails")
+end;
+
+print("Me llamo zSnails2")
