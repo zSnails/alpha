@@ -16,7 +16,7 @@ type Token struct {
 	row, col int
 }
 
-func (t *Token) GetPosition() (int, int) {
+func (t *Token) GetPosition() (row int, col int) {
 	return t.row, t.col
 }
 
