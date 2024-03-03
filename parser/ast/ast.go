@@ -15,7 +15,18 @@ const (
 	Integer
 	Float
 	Identifier
-    String
+	String
+
+	Equals
+	If
+	Then
+	Else
+	While
+	Do
+	Let
+	In
+	Begin
+	End
 )
 
 type Node struct {
