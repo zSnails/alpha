@@ -138,8 +138,122 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			node.AddChild(singleCommand)
 			return node, nil
 		}
+
+	case tokenizer.Let:
+		{
+			node.AddChild(ast.NewNode(ast.Let, nil))
+			p.acceptIt()
+
+			declaration, err := p.Declaration()
+			if err != nil {
+				return nil, err
+			}
+
+			node.AddChild(declaration)
+
+			err = p.expect(tokenizer.In)
+			if err != nil {
+				return nil, err
+			}
+
+			singleCommand, err := p.SingleCommand()
+			if err != nil {
+				return nil, err
+			}
+
+			node.AddChild(singleCommand)
+			return node, nil
+		}
+	case tokenizer.Begin:
+		{
+            p.acceptIt()
+            command, err := p.Command()
+            if err != nil {
+                return nil, err
+            }
+            node.AddChild(command)
+            err = p.expect(tokenizer.End)
+            if err != nil {
+                return nil, err
+            }
+            return node, nil
+		}
 	}
-	return nil, fmt.Errorf("unexpected token %s\n", currentToken)
+	return nil, fmt.Errorf("unexpected token '%s' while building SingleCommand\n", tokenizer.TokenNames[currentToken.Type])
+}
+
+func (p *Parser) Declaration() (*ast.Node, error) {
+	out := ast.NewNode(ast.Declaration, nil)
+	singleDeclaration, err := p.SingleDeclaration()
+	if err != nil {
+		return nil, err
+	}
+	out.AddChild(singleDeclaration)
+
+	for p.tokensLeft() && p.GetCurrentToken().Type == tokenizer.Semicolon {
+		p.acceptIt()
+		single, err := p.SingleDeclaration()
+		if err != nil {
+			return nil, err
+		}
+		out.AddChild(single)
+	}
+
+	return out, nil
+}
+
+func (p *Parser) SingleDeclaration() (*ast.Node, error) {
+	currentToken := p.GetCurrentToken()
+	node := ast.NewNode(ast.SingleDeclaration, nil)
+	switch currentToken.Type {
+	case tokenizer.Const:
+		{
+			node.AddChild(ast.NewNode(ast.Const, nil))
+			p.acceptIt()
+			next := p.GetCurrentToken()
+			if next.Type != tokenizer.Identifier {
+				return nil, fmt.Errorf("unexpected token '%s' while building SingleDeclaration, expected Identifier\n", tokenizer.TokenNames[next.Type])
+			}
+			p.acceptIt()
+			node.AddChild(ast.NewNode(ast.Identifier, next.Value))
+
+			err := p.expect(tokenizer.Tilde)
+			if err != nil {
+				return nil, err
+			}
+
+			expression, err := p.Expression()
+			if err != nil {
+				return nil, err
+			}
+
+			node.AddChild(expression)
+			return node, nil
+		}
+	case tokenizer.Var:
+		{
+			node.AddChild(ast.NewNode(ast.Var, nil))
+			p.acceptIt()
+
+			next := p.GetCurrentToken()
+			if next.Type != tokenizer.Identifier {
+				return nil, fmt.Errorf("unexpected token '%s' while building SingleDeclaration, expected Identifier\n", tokenizer.TokenNames[next.Type])
+			}
+			node.AddChild(ast.NewNode(ast.Identifier, next.Value))
+			p.acceptIt()
+			err := p.expect(tokenizer.Colon)
+			if err != nil {
+				return nil, err
+			}
+			typeDenoter, err := p.TypeDenoter()
+			if err != nil {
+				return nil, err
+			}
+			node.AddChild(typeDenoter)
+			return node, nil
+		}
+	}
+	return nil, nil
 }
 
 func isOperator(token *tokenizer.Token) bool {
@@ -162,7 +276,7 @@ func (p *Parser) TypeDenoter() (*ast.Node, error) {
 		return ast.NewNode(ast.TypeDenoter, currentToken.Value), nil
 	}
 
-	return nil, fmt.Errorf("TODO: Report this error as well")
+	return nil, fmt.Errorf("unexpected token '%s' while building TypeDenoter, expected Identifier\n", tokenizer.TokenNames[currentToken.Type])
 }
 
 func (p *Parser) tokensLeft() bool {
@@ -244,7 +358,7 @@ func (p *Parser) PrimaryExpression() (*ast.Node, error) {
 			return ast.NewNode(ast.String, currentToken.Value[1:]), nil
 		}
 	}
-	return nil, fmt.Errorf("unexpected token while producing PrimaryExpression %s\n", currentToken)
+	return nil, fmt.Errorf("unexpected token '%s' while producing PrimaryExpression\n", currentToken)
 }
 
 func (p *Parser) acceptIt() {
