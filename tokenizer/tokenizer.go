@@ -262,6 +262,7 @@ func FromFile(filename string) (*Tokenizer, error) {
 	return &Tokenizer{
 		content: string(data),
 		cursor:  0,
+		char:    1,
 		line:    1,
 		file:    filename,
 	}, nil
@@ -271,18 +272,15 @@ func NewTokenizer(content string) *Tokenizer {
 	return &Tokenizer{
 		content: content,
 		cursor:  0,
+		char:    1,
 		line:    1,
+		file:    "<stdin>",
 	}
 }
 
 func (t *Tokenizer) match(spec, content string) (string, int) {
 	re := regexp.MustCompile(spec)
 	matched := re.Find([]byte(content))
-
-	// TODO: check if this actually does something
-	// if matched == nil || len(matched) == 0 {
-	// 	return "", 0
-	// }
 
 	size := len(matched)
 	t.cursor += size
@@ -300,6 +298,7 @@ func (t *Tokenizer) GetAllTokens() ([]*Token, error) {
 		tok, err := t.GetNextToken()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
+				out = append(out, tok)
 				return out, nil
 			}
 			return nil, err
@@ -310,7 +309,11 @@ func (t *Tokenizer) GetAllTokens() ([]*Token, error) {
 
 func (t *Tokenizer) GetNextToken() (*Token, error) {
 	if !t.hasMoreTokens() {
-		return nil, io.EOF
+		return &Token{
+			Type: EOF,
+			row:  t.line,
+			col:  t.char,
+		}, io.EOF
 	}
 
 	for _, spec := range SPECS {
@@ -321,7 +324,7 @@ func (t *Tokenizer) GetNextToken() (*Token, error) {
 
 		if spec.Type == NewLine {
 			t.line++
-			t.char = 0
+			t.char = 1
 			return t.GetNextToken()
 		}
 

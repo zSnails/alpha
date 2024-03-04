@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"lang_test/parser/ast"
@@ -42,13 +41,14 @@ func NewParser(lexer *tokenizer.Tokenizer) (*Parser, error) {
 
 func (p *Parser) expect(_type tokenizer.TokenType) error {
 	token, err := p.GetCurrentToken()
-	if err != nil {
-		return p.UnexpectedTokenExpected(EOF, _type)
-	}
-
-	if token.Type != _type {
+	if err != nil || token.Type != _type {
 		return p.UnexpectedTokenExpected(token, _type)
 	}
+
+	// if token.Type != _type {
+	// 	return p.UnexpectedTokenExpected(token, _type)
+	// }
+
 	p.advance()
 
 	return nil
@@ -59,12 +59,12 @@ func (p *Parser) advance() {
 }
 
 func (p *Parser) Program() (*ast.Node, error) {
-	node, err := p.Command()
+	node, err := p.SingleCommand()
 	if err != nil {
 		return nil, err
 	}
 
-	if p.tokensLeft() {
+	if p.tokensLeft() && p.tokens[p.currentToken].Type != tokenizer.EOF {
 		return nil, p.UnexpectedToken(p.MustGetCurrentToken())
 	}
 	return node, nil
@@ -84,7 +84,7 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			p.acceptIt()
 			next, err := p.GetCurrentToken()
 			if err != nil {
-				return nil, p.UnexpectedTokenExpectedOneOf(EOF, tokenizer.Equals, tokenizer.LeftParenthesis)
+				return nil, p.UnexpectedTokenExpectedOneOf(next, tokenizer.Equals, tokenizer.LeftParenthesis)
 			}
 			switch next.Type {
 			case tokenizer.Equals:
@@ -103,7 +103,9 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 					p.acceptIt()
 					next, err = p.GetCurrentToken()
 					if err != nil {
-						return nil, p.UnexpectedTokenExpectedOneOf(EOF, tokenizer.RightParenthesis, tokenizer.Integer, tokenizer.Float, tokenizer.String)
+						return nil, p.UnexpectedTokenExpectedOneOf(next,
+							tokenizer.RightParenthesis, tokenizer.Integer,
+							tokenizer.Float, tokenizer.String)
 					}
 					if next.Type == tokenizer.RightParenthesis {
 						p.acceptIt()
@@ -202,9 +204,6 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			p.acceptIt()
 			command, err := p.Command()
 			if err != nil {
-				if errors.Is(err, io.EOF) {
-					return nil, p.UnexpectedToken(EOF)
-				}
 				return nil, err
 			}
 			node.AddChild(command)
