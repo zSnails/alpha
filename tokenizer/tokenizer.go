@@ -25,7 +25,8 @@ func (t *Token) String() string {
 }
 
 const (
-	Whitespace TokenType = iota
+	EOF TokenType = iota
+	Whitespace
 	NewLine
 	If
 	Then
@@ -206,6 +207,7 @@ var SPECS = []Spec{
 }
 
 var TokenNames = map[TokenType]string{
+	EOF:                    "EOF",
 	Whitespace:             "whitespace",
 	If:                     "if",
 	Then:                   "then",
@@ -296,9 +298,10 @@ func (t *Tokenizer) GetAllTokens() ([]*Token, error) {
 	out := []*Token{}
 	for {
 		tok, err := t.GetNextToken()
-		if err != nil && errors.Is(err, io.EOF) {
-			return out, nil
-		} else if err != nil {
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return out, nil
+			}
 			return nil, err
 		}
 		out = append(out, tok)
