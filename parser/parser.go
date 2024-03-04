@@ -1,11 +1,13 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"lang_test/parser/ast"
 	"lang_test/tokenizer"
 	"strconv"
+	"strings"
 )
 
 type Parser struct {
@@ -41,8 +43,9 @@ func NewParser(lexer *tokenizer.Tokenizer) (*Parser, error) {
 func (p *Parser) expect(_type tokenizer.TokenType) error {
 	token, err := p.GetCurrentToken()
 	if err != nil {
-		return err
+		return p.UnexpectedTokenExpected(EOF, _type)
 	}
+
 	if token.Type != _type {
 		return p.UnexpectedTokenExpected(token, _type)
 	}
@@ -56,15 +59,24 @@ func (p *Parser) advance() {
 }
 
 func (p *Parser) Program() (*ast.Node, error) {
-	return p.Command()
-}
-
-func (p *Parser) SingleCommand() (*ast.Node, error) {
-	currentToken, err := p.GetCurrentToken()
+	node, err := p.Command()
 	if err != nil {
 		return nil, err
 	}
+
+	if p.tokensLeft() {
+		return nil, p.UnexpectedToken(p.MustGetCurrentToken())
+	}
+	return node, nil
+}
+
+func (p *Parser) SingleCommand() (*ast.Node, error) {
 	node := ast.NewNode(ast.SingleCommand, nil)
+	currentToken, err := p.GetCurrentToken() // this error will always be io.EOF
+	if err != nil {
+		return nil, err
+	}
+
 	switch currentToken.Type {
 	case tokenizer.Identifier:
 		{
@@ -72,7 +84,7 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			p.acceptIt()
 			next, err := p.GetCurrentToken()
 			if err != nil {
-				return nil, err
+				return nil, p.UnexpectedTokenExpectedOneOf(EOF, tokenizer.Equals, tokenizer.LeftParenthesis)
 			}
 			switch next.Type {
 			case tokenizer.Equals:
@@ -91,7 +103,7 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 					p.acceptIt()
 					next, err = p.GetCurrentToken()
 					if err != nil {
-						return nil, err
+						return nil, p.UnexpectedTokenExpectedOneOf(EOF, tokenizer.RightParenthesis, tokenizer.Integer, tokenizer.Float, tokenizer.String)
 					}
 					if next.Type == tokenizer.RightParenthesis {
 						p.acceptIt()
@@ -190,6 +202,9 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			p.acceptIt()
 			command, err := p.Command()
 			if err != nil {
+				if errors.Is(err, io.EOF) {
+					return nil, p.UnexpectedToken(EOF)
+				}
 				return nil, err
 			}
 			node.AddChild(command)
@@ -201,6 +216,28 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 		}
 	}
 	return nil, p.UnexpectedToken(currentToken)
+}
+
+func Map[T, B any](slice []T, f func(T) B) []B {
+	out := []B{}
+	for _, v := range slice {
+		out = append(out, f(v))
+	}
+	return out
+}
+
+var EOF = &tokenizer.Token{
+	Type: tokenizer.EOF,
+}
+
+func (p *Parser) UnexpectedTokenExpectedOneOf(got *tokenizer.Token, exptected ...tokenizer.TokenType) error {
+	tokens := Map(exptected, func(token tokenizer.TokenType) string {
+		return fmt.Sprintf("'%s'", tokenizer.TokenNames[token])
+	})
+	expectedTokens := strings.Join(tokens, ", ")
+
+	row, col := got.GetPosition()
+	return fmt.Errorf("%s:%d:%d: unexpected token '%s' expected one of %s", p.lexer.GetFileName(), row, col, tokenizer.TokenNames[got.Type], expectedTokens)
 }
 
 func (p *Parser) UnexpectedTokenExpected(got *tokenizer.Token, expected tokenizer.TokenType) error {
@@ -404,9 +441,6 @@ func (p *Parser) PrimaryExpression() (*ast.Node, error) {
 }
 
 func (p *Parser) acceptIt() {
-	if p.currentToken > len(p.tokens)-1 {
-		panic("lmao")
-	}
 	p.advance()
 }
 
@@ -416,14 +450,16 @@ func (p *Parser) Command() (*ast.Node, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	node.AddChild(singleCommand)
 
-	if p.tokensLeft() && p.MustGetCurrentToken().Type == tokenizer.Semicolon {
+	for p.tokensLeft() && p.MustGetCurrentToken().Type == tokenizer.Semicolon {
 		p.acceptIt()
 		single, err := p.SingleCommand()
 		if err != nil {
 			return nil, err
 		}
+
 		node.AddChild(single)
 	}
 	return node, nil
