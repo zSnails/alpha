@@ -11,6 +11,7 @@ begin
     end
 end;
 
+// This will also error
 let const edad ~ 15 in begin
     if edad < 18 then begin
         print("Le gusta a Z")

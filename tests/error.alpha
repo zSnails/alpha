@@ -1,2 +1,2 @@
 // vim:ft=alpha
-end
+begin print()
