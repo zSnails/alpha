@@ -2,31 +2,37 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"lang_test/parser"
 	"lang_test/tokenizer"
-	"log"
 	"os"
 )
 
-const CONTENT = `
-if something then begin
-    print("Hola mundo")
-end
-else begin
-    print("Adios mundo") 
-end`
-
 func main() {
-	lex := tokenizer.NewTokenizer(CONTENT)
-	parser, err := parser.NewParser(lex)
+
+	if len(os.Args) < 2 {
+		fmt.Fprintln(os.Stderr, "error: missing filename")
+		return
+	}
+
+	tok, err := tokenizer.FromFile(os.Args[1])
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return
+	}
+
+	parser, err := parser.NewParser(tok)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return
 	}
 
 	node, err := parser.Program()
-	if err != nil {
-		log.Fatal(err)
+	if err != nil && !errors.Is(err, io.EOF) {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return
 	}
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
