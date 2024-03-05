@@ -1,0 +1,6 @@
+// vim:ft=alpha
+begin
+    while true do print("Hola mundo");
+    while false do print("Adiós mundo");
+    let var edad: Integer in while edad < 18 do begin print("Sos menor"); edad = edad+1 end
+end

@@ -1,6 +1,0 @@
-// vim:ft=alpha
-begin let const x ~ 333 in begin
-    print("Hola mundo")
-end end
-
-begin print("This is another module and should not be allowed") end

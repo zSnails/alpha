@@ -1,0 +1,6 @@
+// vim:ft=alpha
+if true then begin
+    print("Me llamo Aaron")
+end else begin
+    print("Me llamo Samuel")
+end

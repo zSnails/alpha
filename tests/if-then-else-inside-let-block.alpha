@@ -1,0 +1,8 @@
+// vim:ft=alpha
+let var edad: Integer in
+    if edad < 18 then begin
+        print("Eres menor de edad")
+    end else begin
+        print("Eres mayor de edad, puedes pasar")
+    end
+// NOTE: El programa es válido, que tenga sentido es otra cosa ya

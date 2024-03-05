@@ -1,0 +1,4 @@
+// vim:ft=alpha
+begin
+    print("Hola Mundo")
+end
