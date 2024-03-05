@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"regexp"
 )
 
@@ -253,8 +254,8 @@ func (t *Tokenizer) GetFileName() string {
 	return t.file
 }
 
-func FromFile(filename string) (*Tokenizer, error) {
-	data, err := os.ReadFile(filename)
+func FromFile(name string) (*Tokenizer, error) {
+	data, err := os.ReadFile(name)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +265,7 @@ func FromFile(filename string) (*Tokenizer, error) {
 		cursor:  0,
 		char:    1,
 		line:    1,
-		file:    filename,
+		file:    path.Base(name),
 	}, nil
 }
 
