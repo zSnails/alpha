@@ -5,4 +5,3 @@ let var edad: Integer in
     end else begin
         print("Eres mayor de edad, puedes pasar")
     end
-// NOTE: El programa es válido, que tenga sentido es otra cosa ya
