@@ -88,28 +88,28 @@ func (n *Node) String() string {
 }
 
 func (n *Node) buildSExp(sb *strings.Builder, level int) {
-    if n == nil {
-        return
-    }
-    indent := strings.Repeat("    ", level)
+	if n == nil {
+		return
+	}
+	indent := strings.Repeat("    ", level)
 
 	switch v := n.Value.(type) {
 	case string:
-        fmt.Fprintf(sb, "%s\"%s\"", indent, v)
+		fmt.Fprintf(sb, "%s\"%s\"", indent, v)
 	case nil:
 		fmt.Fprintf(sb, "%s%s", indent, ConstructNames[n.Type])
 	default:
 		fmt.Fprintf(sb, "%s%v", indent, n.Value)
 	}
 
-    if len(n.Children) > 0 {
-        fmt.Fprint(sb, " (")
-        for _, child := range n.Children {
-            fmt.Fprintln(sb)
-            child.buildSExp(sb, level+1)
-        }
-        fmt.Fprint(sb, ")")
-    }
+	if len(n.Children) > 0 {
+		fmt.Fprint(sb, " (")
+		for _, child := range n.Children {
+			fmt.Fprintln(sb)
+			child.buildSExp(sb, level+1)
+		}
+		fmt.Fprint(sb, ")")
+	}
 }
 
 func NewNode(_type NodeType, value any) *Node {
