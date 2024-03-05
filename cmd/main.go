@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"lang_test/parser"
-	"lang_test/tokenizer"
 	"os"
+
+	"github.com/zSnails/alpha/parser"
+	"github.com/zSnails/alpha/tokenizer"
 )
 
 func main() {
@@ -34,6 +35,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		return
 	}
+	// fmt.Printf("node: %v\n", node)
+
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	fmt.Print("Ast ")
