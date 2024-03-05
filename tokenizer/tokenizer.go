@@ -308,6 +308,10 @@ func (t *Tokenizer) GetAllTokens() ([]*Token, error) {
 	}
 }
 
+// GetNextToken returns the next token recognized from the input stream
+//
+// returns io.EOF when the last token is reached, when the error is `io.EOF` the last token returned is
+// an EOF token indicating that an end of file has been found
 func (t *Tokenizer) GetNextToken() (*Token, error) {
 	if !t.hasMoreTokens() {
 		return &Token{
