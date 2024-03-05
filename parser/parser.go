@@ -3,10 +3,11 @@ package parser
 import (
 	"fmt"
 	"io"
-	"lang_test/parser/ast"
-	"lang_test/tokenizer"
 	"strconv"
 	"strings"
+
+	"github.com/zSnails/alpha/parser/ast"
+	"github.com/zSnails/alpha/tokenizer"
 )
 
 // The parser structure implements a recursive descent parser
@@ -59,7 +60,7 @@ func (p *Parser) advance() {
 
 // Program parses the basic program construct
 //
-//  program ::= singleCommand
+//	program ::= singleCommand
 func (p *Parser) Program() (*ast.Node, error) {
 	node, err := p.SingleCommand()
 	if err != nil {
@@ -74,12 +75,12 @@ func (p *Parser) Program() (*ast.Node, error) {
 
 // SingleCommand parses the basic singleCommand construct
 //
-//  singleCommand ::= 
-//           Identifier (= expression | (expression))
-//          | if expression then singleCommand
-//          | while expression do singleCommand
-//          | let declaration in singleCommand
-//          | begin command end
+//	singleCommand ::=
+//	         Identifier (= expression | (expression))
+//	        | if expression then singleCommand
+//	        | while expression do singleCommand
+//	        | let declaration in singleCommand
+//	        | begin command end
 func (p *Parser) SingleCommand() (*ast.Node, error) {
 	node := ast.NewNode(ast.SingleCommand, nil)
 	currentToken, err := p.getCurrentToken() // this error will always be io.EOF
@@ -284,9 +285,9 @@ func (p *Parser) Declaration() (*ast.Node, error) {
 
 // SingleDeclaration parses the basic singleDeclaration construct
 //
-//  singleDeclaration ::= 
-//           const Identifier ~ expression
-//         | var identifier : typeDenoter
+//	singleDeclaration ::=
+//	         const Identifier ~ expression
+//	       | var identifier : typeDenoter
 func (p *Parser) SingleDeclaration() (*ast.Node, error) {
 	currentToken, err := p.getCurrentToken()
 	if err != nil {
@@ -472,7 +473,7 @@ func (p *Parser) acceptIt() {
 
 // Command parses the basic command construct
 //
-//  command ::= singleCommand (; singleCommand)*
+//	command ::= singleCommand (; singleCommand)*
 func (p *Parser) Command() (*ast.Node, error) {
 	node := ast.NewNode(ast.Command, nil)
 	singleCommand, err := p.SingleCommand()
