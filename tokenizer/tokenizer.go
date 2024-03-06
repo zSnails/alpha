@@ -338,6 +338,9 @@ func (t *Tokenizer) GetNextToken() (*Token, error) {
 		}
 
 		if spec.Type == String {
+			if !t.hasMoreTokens() || (t.content[t.cursor] != '"' && t.content[t.cursor] != '\'') {
+				return nil, fmt.Errorf("%s:%d:%d: syntax error: missing string closing quote", t.file, t.line, t.char)
+			}
 			t.cursor++ // Skip the closing quote on strings
 		}
 
@@ -349,5 +352,5 @@ func (t *Tokenizer) GetNextToken() (*Token, error) {
 		}, nil
 	}
 
-	return nil, fmt.Errorf("%s:%d:%d: unexpected token '%c'\n", t.file, t.line, t.char, t.content[t.cursor])
+	return nil, fmt.Errorf("%s:%d:%d: syntax error: unexpected token '%c'\n", t.file, t.line, t.char, t.content[t.cursor])
 }
