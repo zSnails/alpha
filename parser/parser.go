@@ -12,8 +12,7 @@ import (
 
 // The parser structure implements a recursive descent parser
 type Parser struct {
-	tokens       []*tokenizer.Token
-	currentToken int
+	currentToken *tokenizer.Token
 	lexer        *tokenizer.Tokenizer
 }
 
@@ -22,25 +21,25 @@ func (p *Parser) getCurrentToken() (*tokenizer.Token, error) {
 	if !p.tokensLeft() {
 		return nil, io.EOF
 	}
-	return p.tokens[p.currentToken], nil
+	return p.currentToken, nil
 }
 
 // mustGetCurrentToken always returns the current token and doesn't do any boundary checks
 // useful for cases where you know there must be an available token to be consumed.
 func (p *Parser) mustGetCurrentToken() *tokenizer.Token {
-	return p.tokens[p.currentToken]
+	return p.currentToken
 }
 
 // NewParser returns an instance of a brand new parser consuming the tokens in
 // the lexer.
 func NewParser(lexer *tokenizer.Tokenizer) (*Parser, error) {
-	tokens, err := lexer.GetAllTokens()
+	initial, err := lexer.GetNextToken()
 	if err != nil {
 		return nil, err
 	}
 	return &Parser{
-		tokens: tokens,
-		lexer:  lexer,
+		currentToken: initial,
+		lexer:        lexer,
 	}, nil
 }
 
@@ -55,7 +54,8 @@ func (p *Parser) expect(_type tokenizer.TokenType) error {
 }
 
 func (p *Parser) advance() {
-	p.currentToken++
+	next, _ := p.lexer.GetNextToken()
+	p.currentToken = next
 }
 
 // Program parses the basic program construct
@@ -67,7 +67,7 @@ func (p *Parser) Program() (*ast.Node, error) {
 		return nil, err
 	}
 
-	if p.tokensLeft() && p.tokens[p.currentToken].Type != tokenizer.EOF {
+	if p.tokensLeft() && p.currentToken.Type != tokenizer.EOF {
 		return nil, p.UnexpectedToken(p.mustGetCurrentToken())
 	}
 	return node, nil
@@ -370,7 +370,7 @@ func (p *Parser) TypeDenoter() (*ast.Node, error) {
 }
 
 func (p *Parser) tokensLeft() bool {
-	return p.currentToken < len(p.tokens)
+	return p.currentToken.Type != tokenizer.EOF
 }
 
 // Expression parses the expression construct
