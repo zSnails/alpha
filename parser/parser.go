@@ -47,7 +47,7 @@ func NewParser(lexer *tokenizer.Tokenizer) (*Parser, error) {
 func (p *Parser) expect(_type tokenizer.TokenType) error {
 	token, err := p.getCurrentToken()
 	if err != nil || token.Type != _type {
-		return p.UnexpectedTokenExpected(token, _type)
+		return p.UnexpectedToken(token, _type)
 	}
 	p.advance()
 
@@ -92,16 +92,16 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 	case tokenizer.Identifier:
 		{
 			node.AddChild(ast.NewNode(ast.Identifier, currentToken.Value))
-            p.advance()
+			p.advance()
 			next, err := p.getCurrentToken()
 			if err != nil {
-				return nil, p.UnexpectedTokenExpectedOneOf(next, tokenizer.Equals, tokenizer.LeftParenthesis)
+				return nil, p.UnexpectedToken(next, tokenizer.Equals, tokenizer.LeftParenthesis)
 			}
 			switch next.Type {
 			case tokenizer.Equals:
 				{
 					node.AddChild(ast.NewNode(ast.Equals, next.Value))
-                    p.advance()
+					p.advance()
 					expressionNode, err := p.Expression()
 					if err != nil {
 						return nil, err
@@ -111,16 +111,16 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 				}
 			case tokenizer.LeftParenthesis:
 				{
-                    p.advance()
+					p.advance()
 					next, err = p.getCurrentToken()
 					if err != nil {
-						return nil, p.UnexpectedTokenExpectedOneOf(next,
+						return nil, p.UnexpectedToken(next,
 							tokenizer.RightParenthesis, tokenizer.Integer,
 							tokenizer.Float, tokenizer.String)
 					}
-                    print()
+					print()
 					if next.Type == tokenizer.RightParenthesis {
-                        p.advance()
+						p.advance()
 						return node, nil
 					}
 
@@ -140,7 +140,7 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 	case tokenizer.If:
 		{
 			node.AddChild(ast.NewNode(ast.If, nil))
-            p.advance()
+			p.advance()
 			expressionNode, err := p.Expression()
 			if err != nil {
 				return nil, err
@@ -169,7 +169,7 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 	case tokenizer.While:
 		{
 			node.AddChild(ast.NewNode(ast.While, nil))
-            p.advance()
+			p.advance()
 			while, err := p.Expression()
 			if err != nil {
 				return nil, err
@@ -190,7 +190,7 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 	case tokenizer.Let:
 		{
 			node.AddChild(ast.NewNode(ast.Let, nil))
-            p.advance()
+			p.advance()
 
 			declaration, err := p.Declaration()
 			if err != nil {
@@ -213,7 +213,7 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 		}
 	case tokenizer.Begin:
 		{
-            p.advance()
+			p.advance()
 			command, err := p.Command()
 			if err != nil {
 				return nil, err
@@ -226,7 +226,7 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			return node, nil
 		}
 	}
-	return nil, p.UnexpectedToken(currentToken)
+	return nil, p.UnexpectedToken(currentToken, tokenizer.Begin, tokenizer.Let, tokenizer.While, tokenizer.If, tokenizer.Identifier)
 }
 
 func Map[T, B any](slice []T, f func(T) B) []B {
@@ -241,24 +241,19 @@ var EOF = &tokenizer.Token{
 	Type: tokenizer.EOF,
 }
 
-func (p *Parser) UnexpectedTokenExpectedOneOf(got *tokenizer.Token, exptected ...tokenizer.TokenType) error {
-	tokens := Map(exptected, func(token tokenizer.TokenType) string {
-		return fmt.Sprintf("'%s'", tokenizer.TokenNames[token])
-	})
-	expectedTokens := strings.Join(tokens, ", ")
-
+func (p *Parser) UnexpectedToken(got *tokenizer.Token, expected ...tokenizer.TokenType) error {
 	row, col := got.GetPosition()
-	return fmt.Errorf("%s:%d:%d: unexpected token '%s' expected one of %s", p.lexer.GetFileName(), row, col, tokenizer.TokenNames[got.Type], expectedTokens)
-}
+	if len(expected) > 1 {
+		tokens := Map(expected, func(token tokenizer.TokenType) string {
+			return fmt.Sprintf("'%s'", tokenizer.TokenNames[token])
+		})
+		expectedTokens := strings.Join(tokens, ", ")
 
-func (p *Parser) UnexpectedTokenExpected(got *tokenizer.Token, expected tokenizer.TokenType) error {
-	row, col := got.GetPosition()
-	return fmt.Errorf("%s:%d:%d: unexpected token '%s' expected '%s'\n", p.lexer.GetFileName(), row, col, tokenizer.TokenNames[got.Type], tokenizer.TokenNames[expected])
-}
-
-func (p *Parser) UnexpectedToken(token *tokenizer.Token) error {
-	row, col := token.GetPosition()
-	return fmt.Errorf("%s:%d:%d: unexpected token '%s'\n", p.lexer.GetFileName(), row, col, tokenizer.TokenNames[token.Type])
+		return fmt.Errorf("%s:%d:%d: unexpected token '%s' expected one of %s", p.lexer.GetFileName(), row, col, tokenizer.TokenNames[got.Type], expectedTokens)
+	} else if len(expected) == 1 {
+		return fmt.Errorf("%s:%d:%d: unexpected token '%s' expected '%s'\n", p.lexer.GetFileName(), row, col, tokenizer.TokenNames[got.Type], tokenizer.TokenNames[expected[0]])
+	}
+	return fmt.Errorf("%s:%d:%d: unexpected token '%s'\n", p.lexer.GetFileName(), row, col, tokenizer.TokenNames[got.Type])
 }
 
 // Declaration parses the basic declaration construct
@@ -273,7 +268,7 @@ func (p *Parser) Declaration() (*ast.Node, error) {
 	node.AddChild(singleDeclaration)
 
 	for p.tokensLeft() && p.mustGetCurrentToken().Type == tokenizer.Semicolon {
-        p.advance()
+		p.advance()
 		single, err := p.SingleDeclaration()
 		if err != nil {
 			return nil, err
@@ -299,15 +294,15 @@ func (p *Parser) SingleDeclaration() (*ast.Node, error) {
 	case tokenizer.Const:
 		{
 			node.AddChild(ast.NewNode(ast.Const, nil))
-            p.advance()
+			p.advance()
 			next, err := p.getCurrentToken()
 			if err != nil {
 				return nil, err
 			}
 			if next.Type != tokenizer.Identifier {
-				return nil, p.UnexpectedTokenExpected(currentToken, tokenizer.Identifier)
+				return nil, p.UnexpectedToken(currentToken, tokenizer.Identifier)
 			}
-            p.advance()
+			p.advance()
 			node.AddChild(ast.NewNode(ast.Identifier, next.Value))
 
 			err = p.expect(tokenizer.Tilde)
@@ -326,17 +321,17 @@ func (p *Parser) SingleDeclaration() (*ast.Node, error) {
 	case tokenizer.Var:
 		{
 			node.AddChild(ast.NewNode(ast.Var, nil))
-            p.advance()
+			p.advance()
 
 			next, err := p.getCurrentToken()
 			if err != nil {
 				return nil, err
 			}
 			if next.Type != tokenizer.Identifier {
-				return nil, p.UnexpectedTokenExpected(currentToken, tokenizer.Identifier)
+				return nil, p.UnexpectedToken(currentToken, tokenizer.Identifier)
 			}
 			node.AddChild(ast.NewNode(ast.Identifier, next.Value))
-            p.advance()
+			p.advance()
 			err = p.expect(tokenizer.Colon)
 			if err != nil {
 				return nil, err
@@ -367,11 +362,11 @@ func (p *Parser) TypeDenoter() (*ast.Node, error) {
 		return nil, err
 	}
 	if currentToken.Type == tokenizer.Identifier {
-        p.advance()
+		p.advance()
 		return ast.NewNode(ast.TypeDenoter, currentToken.Value), nil
 	}
 
-	return nil, p.UnexpectedTokenExpected(currentToken, tokenizer.Identifier)
+	return nil, p.UnexpectedToken(currentToken, tokenizer.Identifier)
 }
 
 func (p *Parser) tokensLeft() bool {
@@ -396,7 +391,7 @@ func (p *Parser) Expression() (*ast.Node, error) {
 		}
 		operatorNode := ast.NewNode(ast.Operator, operator)
 		node.AddChild(operatorNode)
-        p.advance()
+		p.advance()
 		primaryExpressionNode, err = p.PrimaryExpression()
 		if err != nil {
 			return nil, err
@@ -427,7 +422,7 @@ func (p *Parser) PrimaryExpression() (*ast.Node, error) {
 	switch currentToken.Type {
 	case tokenizer.Integer:
 		{
-            p.advance()
+			p.advance()
 			value, err := strconv.Atoi(currentToken.Value)
 			if err != nil {
 				return nil, err
@@ -436,7 +431,7 @@ func (p *Parser) PrimaryExpression() (*ast.Node, error) {
 		}
 	case tokenizer.Float:
 		{
-            p.advance()
+			p.advance()
 			value, err := strconv.ParseFloat(currentToken.Value, 64)
 			if err != nil {
 				return nil, err
@@ -445,7 +440,7 @@ func (p *Parser) PrimaryExpression() (*ast.Node, error) {
 		}
 	case tokenizer.LeftParenthesis:
 		{
-            p.advance()
+			p.advance()
 			res, err := p.Expression()
 			if err != nil {
 				return nil, err
@@ -456,16 +451,16 @@ func (p *Parser) PrimaryExpression() (*ast.Node, error) {
 
 	case tokenizer.Identifier:
 		{
-            p.advance()
+			p.advance()
 			return ast.NewNode(ast.Identifier, currentToken.Value), nil
 		}
 	case tokenizer.String:
 		{
-            p.advance()
+			p.advance()
 			return ast.NewNode(ast.String, currentToken.Value[1:]), nil
 		}
 	}
-	return nil, p.UnexpectedToken(currentToken)
+	return nil, p.UnexpectedToken(currentToken, tokenizer.Identifier, tokenizer.String, tokenizer.Integer, tokenizer.Float, tokenizer.LeftParenthesis)
 }
 
 // Command parses the basic command construct
@@ -481,7 +476,7 @@ func (p *Parser) Command() (*ast.Node, error) {
 	node.AddChild(singleCommand)
 
 	for p.tokensLeft() && p.mustGetCurrentToken().Type == tokenizer.Semicolon {
-        p.advance()
+		p.advance()
 		single, err := p.SingleCommand()
 		if err != nil {
 			return nil, err
