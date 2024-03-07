@@ -12,7 +12,8 @@ import (
 
 // The parser structure implements a recursive descent parser
 type Parser struct {
-	currentToken *tokenizer.Token
+	currentToken int
+	tokens       []*tokenizer.Token
 	lexer        *tokenizer.Tokenizer
 }
 
@@ -21,25 +22,27 @@ func (p *Parser) getCurrentToken() (*tokenizer.Token, error) {
 	if !p.tokensLeft() {
 		return nil, io.EOF
 	}
-	return p.currentToken, nil
+	return p.tokens[p.currentToken], nil
 }
 
 // mustGetCurrentToken always returns the current token and doesn't do any boundary checks
 // useful for cases where you know there must be an available token to be consumed.
 func (p *Parser) mustGetCurrentToken() *tokenizer.Token {
-	return p.currentToken
+	return p.tokens[p.currentToken]
 }
 
 // NewParser returns an instance of a brand new parser consuming the tokens in
 // the lexer.
 func NewParser(lexer *tokenizer.Tokenizer) (*Parser, error) {
-	initial, err := lexer.GetNextToken()
+	tokens, err := lexer.GetAllTokens()
 	if err != nil {
 		return nil, err
 	}
+
 	return &Parser{
-		currentToken: initial,
+		currentToken: 0,
 		lexer:        lexer,
+		tokens:       tokens,
 	}, nil
 }
 
@@ -49,26 +52,25 @@ func (p *Parser) expect(_type tokenizer.TokenType) error {
 		return p.UnexpectedToken(token, _type)
 	}
 	p.advance()
-
 	return nil
 }
 
 func (p *Parser) advance() {
-	next, _ := p.lexer.GetNextToken()
-	p.currentToken = next
+	p.currentToken++
 }
 
 // Program parses the basic program construct
 //
 //	program ::= singleCommand
-func (p *Parser) Program() (*ast.Node, error) {
+func (p *Parser) Program() (ast.Node, error) {
 	node, err := p.SingleCommand()
 	if err != nil {
 		return nil, err
 	}
 
-	if p.tokensLeft() && p.currentToken.Type != tokenizer.EOF {
-		return nil, p.UnexpectedToken(p.mustGetCurrentToken())
+	err = p.expect(tokenizer.EOF)
+	if err != nil {
+		return nil, err
 	}
 	return node, nil
 }
@@ -81,8 +83,7 @@ func (p *Parser) Program() (*ast.Node, error) {
 //	        | while expression do singleCommand
 //	        | let declaration in singleCommand
 //	        | begin command end
-func (p *Parser) SingleCommand() (*ast.Node, error) {
-	node := ast.NewNode(ast.SingleCommand, nil)
+func (p *Parser) SingleCommand() (ast.Node, error) {
 	currentToken, err := p.getCurrentToken() // this error will always be io.EOF
 	if err != nil {
 		return nil, err
@@ -91,7 +92,7 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 	switch currentToken.Type {
 	case tokenizer.Identifier:
 		{
-			node.AddChild(ast.NewNode(ast.Identifier, currentToken.Value))
+			ident := p.mustGetCurrentToken()
 			p.advance()
 			next, err := p.getCurrentToken()
 			if err != nil {
@@ -100,14 +101,12 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			switch next.Type {
 			case tokenizer.Equals:
 				{
-					node.AddChild(ast.NewNode(ast.Equals, next.Value))
 					p.advance()
 					expressionNode, err := p.Expression()
 					if err != nil {
 						return nil, err
 					}
-					node.AddChild(expressionNode)
-					return node, nil
+					return ast.NewAssignment(ident, expressionNode), nil
 				}
 			case tokenizer.LeftParenthesis:
 				{
@@ -118,10 +117,9 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 							tokenizer.RightParenthesis, tokenizer.Integer,
 							tokenizer.Float, tokenizer.String)
 					}
-					print()
 					if next.Type == tokenizer.RightParenthesis {
 						p.advance()
-						return node, nil
+						return ast.NewFunctionCall(ident, nil), nil
 					}
 
 					expressionNode, err := p.Expression()
@@ -132,20 +130,17 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 					if err != nil {
 						return nil, err
 					}
-					node.AddChild(expressionNode)
-					return node, nil
+					return ast.NewFunctionCall(ident, expressionNode), nil
 				}
 			}
 		}
 	case tokenizer.If:
 		{
-			node.AddChild(ast.NewNode(ast.If, nil))
 			p.advance()
 			expressionNode, err := p.Expression()
 			if err != nil {
 				return nil, err
 			}
-			node.AddChild(expressionNode)
 			err = p.expect(tokenizer.Then)
 			if err != nil {
 				return nil, err
@@ -154,7 +149,6 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			if err != nil {
 				return nil, err
 			}
-			node.AddChild(ifBlockSingleCommand)
 			err = p.expect(tokenizer.Else)
 			if err != nil {
 				return nil, err
@@ -163,18 +157,16 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			if err != nil {
 				return nil, err
 			}
-			node.AddChild(elseBlockSingleCommand)
-			return node, nil
+
+			return ast.NewIfBlock(expressionNode, ifBlockSingleCommand, elseBlockSingleCommand), nil
 		}
 	case tokenizer.While:
 		{
-			node.AddChild(ast.NewNode(ast.While, nil))
 			p.advance()
-			while, err := p.Expression()
+			expression, err := p.Expression()
 			if err != nil {
 				return nil, err
 			}
-			node.AddChild(while)
 			err = p.expect(tokenizer.Do)
 			if err != nil {
 				return nil, err
@@ -183,20 +175,16 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			if err != nil {
 				return nil, err
 			}
-			node.AddChild(singleCommand)
-			return node, nil
+			return ast.NewWhileBlock(expression, singleCommand), nil
 		}
 
 	case tokenizer.Let:
 		{
-			node.AddChild(ast.NewNode(ast.Let, nil))
 			p.advance()
-
 			declaration, err := p.Declaration()
 			if err != nil {
 				return nil, err
 			}
-			node.AddChild(declaration)
 
 			err = p.expect(tokenizer.In)
 			if err != nil {
@@ -208,8 +196,7 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 				return nil, err
 			}
 
-			node.AddChild(singleCommand)
-			return node, nil
+			return ast.NewLetBlock(declaration, singleCommand), nil
 		}
 	case tokenizer.Begin:
 		{
@@ -218,12 +205,11 @@ func (p *Parser) SingleCommand() (*ast.Node, error) {
 			if err != nil {
 				return nil, err
 			}
-			node.AddChild(command)
 			err = p.expect(tokenizer.End)
 			if err != nil {
 				return nil, err
 			}
-			return node, nil
+			return ast.NewBeginBlock(command), nil
 		}
 	}
 	return nil, p.UnexpectedToken(currentToken, tokenizer.Begin, tokenizer.Let, tokenizer.While, tokenizer.If, tokenizer.Identifier)
@@ -259,8 +245,8 @@ func (p *Parser) UnexpectedToken(got *tokenizer.Token, expected ...tokenizer.Tok
 // Declaration parses the basic declaration construct
 //
 // declaration ::= singleDeclaration (; singleDeclaration)*
-func (p *Parser) Declaration() (*ast.Node, error) {
-	node := ast.NewNode(ast.Declaration, nil)
+func (p *Parser) Declaration() (*ast.Declaration, error) {
+	node := ast.NewDeclaration()
 	singleDeclaration, err := p.SingleDeclaration()
 	if err != nil {
 		return nil, err
@@ -284,16 +270,14 @@ func (p *Parser) Declaration() (*ast.Node, error) {
 //	singleDeclaration ::=
 //	         const Identifier ~ expression
 //	       | var identifier : typeDenoter
-func (p *Parser) SingleDeclaration() (*ast.Node, error) {
+func (p *Parser) SingleDeclaration() (ast.Node, error) {
 	currentToken, err := p.getCurrentToken()
 	if err != nil {
 		return nil, err
 	}
-	node := ast.NewNode(ast.SingleDeclaration, nil)
 	switch currentToken.Type {
 	case tokenizer.Const:
 		{
-			node.AddChild(ast.NewNode(ast.Const, nil))
 			p.advance()
 			next, err := p.getCurrentToken()
 			if err != nil {
@@ -303,8 +287,6 @@ func (p *Parser) SingleDeclaration() (*ast.Node, error) {
 				return nil, p.UnexpectedToken(currentToken, tokenizer.Identifier)
 			}
 			p.advance()
-			node.AddChild(ast.NewNode(ast.Identifier, next.Value))
-
 			err = p.expect(tokenizer.Tilde)
 			if err != nil {
 				return nil, err
@@ -315,14 +297,11 @@ func (p *Parser) SingleDeclaration() (*ast.Node, error) {
 				return nil, err
 			}
 
-			node.AddChild(expression)
-			return node, nil
+			return ast.NewConstBlock(next, expression), nil
 		}
 	case tokenizer.Var:
 		{
-			node.AddChild(ast.NewNode(ast.Var, nil))
 			p.advance()
-
 			next, err := p.getCurrentToken()
 			if err != nil {
 				return nil, err
@@ -330,7 +309,6 @@ func (p *Parser) SingleDeclaration() (*ast.Node, error) {
 			if next.Type != tokenizer.Identifier {
 				return nil, p.UnexpectedToken(currentToken, tokenizer.Identifier)
 			}
-			node.AddChild(ast.NewNode(ast.Identifier, next.Value))
 			p.advance()
 			err = p.expect(tokenizer.Colon)
 			if err != nil {
@@ -340,8 +318,7 @@ func (p *Parser) SingleDeclaration() (*ast.Node, error) {
 			if err != nil {
 				return nil, err
 			}
-			node.AddChild(typeDenoter)
-			return node, nil
+			return ast.NewVarBlock(next, typeDenoter), nil
 		}
 	}
 	return nil, nil
@@ -356,28 +333,28 @@ func isOperator(token *tokenizer.Token) bool {
 // TypeDenoter parses the basic typeDenoter construct
 //
 // typeDenoter ::= Identifier
-func (p *Parser) TypeDenoter() (*ast.Node, error) {
+func (p *Parser) TypeDenoter() (*ast.TypeDenoter, error) {
 	currentToken, err := p.getCurrentToken()
 	if err != nil {
 		return nil, err
 	}
 	if currentToken.Type == tokenizer.Identifier {
 		p.advance()
-		return ast.NewNode(ast.TypeDenoter, currentToken.Value), nil
+		return ast.NewTypeDenoter(currentToken), nil
 	}
 
 	return nil, p.UnexpectedToken(currentToken, tokenizer.Identifier)
 }
 
 func (p *Parser) tokensLeft() bool {
-	return p.currentToken.Type != tokenizer.EOF
+	return p.currentToken < len(p.tokens)
 }
 
 // Expression parses the expression construct
 //
 // expression ::= primaryExpression (operator primaryExpression)*
-func (p *Parser) Expression() (*ast.Node, error) {
-	node := ast.NewNode(ast.Expression, nil)
+func (p *Parser) Expression() (*ast.Expression, error) {
+	node := ast.NewExpression()
 	primaryExpressionNode, err := p.PrimaryExpression()
 	if err != nil {
 		return nil, err
@@ -389,7 +366,7 @@ func (p *Parser) Expression() (*ast.Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		operatorNode := ast.NewNode(ast.Operator, operator)
+		operatorNode := ast.NewOperator(operator.Type)
 		node.AddChild(operatorNode)
 		p.advance()
 		primaryExpressionNode, err = p.PrimaryExpression()
@@ -414,7 +391,7 @@ func isOneOf(token *tokenizer.Token, types ...tokenizer.TokenType) bool {
 // PrimaryExpression parses the basic primaryExpression construct
 //
 // primaryExpression ::= Literal | Identifier | ( expression )
-func (p *Parser) PrimaryExpression() (*ast.Node, error) {
+func (p *Parser) PrimaryExpression() (ast.Node, error) {
 	currentToken, err := p.getCurrentToken()
 	if err != nil {
 		return nil, err
@@ -427,7 +404,7 @@ func (p *Parser) PrimaryExpression() (*ast.Node, error) {
 			if err != nil {
 				return nil, err
 			}
-			return ast.NewNode(ast.Integer, value), nil
+			return ast.NewPrimaryExpressionInteger(value), nil
 		}
 	case tokenizer.Float:
 		{
@@ -436,7 +413,7 @@ func (p *Parser) PrimaryExpression() (*ast.Node, error) {
 			if err != nil {
 				return nil, err
 			}
-			return ast.NewNode(ast.Integer, value), nil
+			return ast.NewPrimaryExpressionFloat(value), nil
 		}
 	case tokenizer.LeftParenthesis:
 		{
@@ -452,12 +429,12 @@ func (p *Parser) PrimaryExpression() (*ast.Node, error) {
 	case tokenizer.Identifier:
 		{
 			p.advance()
-			return ast.NewNode(ast.Identifier, currentToken.Value), nil
+			return ast.NewPrimaryExpressionIdentifier(*currentToken), nil
 		}
 	case tokenizer.String:
 		{
 			p.advance()
-			return ast.NewNode(ast.String, currentToken.Value[1:]), nil
+			return ast.NewPrimaryExpressionString(currentToken.Value[1:]), nil
 		}
 	}
 	return nil, p.UnexpectedToken(currentToken, tokenizer.Identifier, tokenizer.String, tokenizer.Integer, tokenizer.Float, tokenizer.LeftParenthesis)
@@ -466,8 +443,8 @@ func (p *Parser) PrimaryExpression() (*ast.Node, error) {
 // Command parses the basic command construct
 //
 //	command ::= singleCommand (; singleCommand)*
-func (p *Parser) Command() (*ast.Node, error) {
-	node := ast.NewNode(ast.Command, nil)
+func (p *Parser) Command() (*ast.Command, error) {
+	node := ast.NewCommand()
 	singleCommand, err := p.SingleCommand()
 	if err != nil {
 		return nil, err
