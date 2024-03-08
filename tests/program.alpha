@@ -1,2 +1,2 @@
 // vim:ft=alpha
-begin print("") end
+begin print("fuap"); print("hola mundo") end
