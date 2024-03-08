@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -34,5 +35,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		return
 	}
-	fmt.Printf("%s\n", node)
+	// fmt.Printf("%s\n", node)
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "    ")
+	_ = encoder.Encode(node)
 }
